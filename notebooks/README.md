@@ -34,6 +34,30 @@ in section 3. Keep the original file names.
 If a link does not open on your device either, that is a finding: report it.
 Never commit these files; the repository ignores them.
 
+### Run 3: targeted checks (notebook v2.1)
+Run 2 read the real files and left open questions. Section 7 of the notebook
+answers them, each check reading only the columns it needs:
+1. **Swapped coordinates:** how many points fall outside a box around
+   Argentina, and how many a longitude/latitude swap would fix (registry, production, shapefile).
+2. **Freshness:** the first and last month in each file, rows per year, and what share of
+   wells have a first-production date of 2006-01 (cut off).
+3. **Fracturing zeros:** how often lateral length, stages and sand are `0` or empty (Vaca Muerta rows).
+4. **Repeated well names:** do the repeated `sigla` values differ by formation or by location?
+5. **Formation spellings:** every value in production, and every Vaca Muerta or Quintuco spelling in the registry.
+6. **Flags and numbers:** `rectificado`, `habilitado`, and a numeric summary of production.
+7. **Concession keys:** do concession codes and names match the registry and production area columns?
+8. **Training set size:** how many Vaca Muerta wells have 12 complete months of oil, are not cut
+   off at 2006, and have a fracturing record.
+
+If the Colab session is still open, files uploaded before are reused (the report
+says so and keeps their fingerprints). A skipped upload now prints a `SKIPPED` line.
+
+### The reachability probe
+`.github/workflows/probe-file-host.yml` asks one question: does the file host
+answer from GitHub's servers? It sends HEAD requests only (nothing is downloaded).
+Run it from the Actions tab (Run workflow). The answer decides where the monthly
+ingestion job can run.
+
 ### What it does
 1. Asks the CKAN API about each candidate dataset: license, last modified,
    files. Retries temporary failures, gives up on a 404, and stops waiting on
@@ -49,7 +73,8 @@ It writes nothing to a database and never invents a value. Every failure goes
 into `errors` in the report.
 
 ### Tested
-26 offline checks (toy data, a fake portal): both hosts working, everything
-blocked, catalog up with the file host silent (with and without uploads),
-duplicate resource names, and browser-renamed uploads. It has **not** yet run
-on the real files.
+41 offline checks (toy data with the structure of the real files, and a fake portal):
+both hosts working, everything blocked, catalog up with the file host silent (with and
+without uploads), reuse of files in the same session, duplicate resource names,
+browser-renamed uploads, and each run 3 check against a known answer. The checks have
+**not** yet run on the real files.
