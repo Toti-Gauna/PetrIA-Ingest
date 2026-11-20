@@ -8,7 +8,7 @@ PetrIA estimates productivity from existing wells. It does not discover oil,
 and it is not drilling or investment advice.
 
 ## Status
-Planned: Stage 1. Nothing is implemented yet.
+Planned: version 1.0 (data pipeline). Only the data-verification notebook exists so far, see `notebooks/`.
 
 ## Planned stack
 Python, PostGIS, RabbitMQ

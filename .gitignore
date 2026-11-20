@@ -30,3 +30,7 @@ data/
 artifacts/
 *.parquet
 *.pkl
+
+# Output of the verification notebook
+data_verification/
+verification_report.json
