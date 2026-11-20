@@ -1,0 +1,48 @@
+name: probe-file-host
+
+# Does the government file host answer from GitHub's servers?
+# The answer decides where the monthly ingestion job can run.
+# Runs by hand (Actions tab, Run workflow) and when this file changes.
+# HEAD requests only: nothing is downloaded.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/probe-file-host.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: DNS
+        run: |
+          getent hosts datos.energia.gob.ar || echo "DNS: no answer for datos.energia.gob.ar"
+          getent hosts datos.gob.ar || echo "DNS: no answer for datos.gob.ar"
+
+      - name: Does the catalog answer? (datos.gob.ar)
+        run: |
+          curl -sS --connect-timeout 10 --max-time 30 -o /dev/null \
+            -w "catalog: status=%{http_code} connect=%{time_connect}s total=%{time_total}s\n" \
+            "https://datos.gob.ar/api/3/action/package_show?id=energia-datos-fractura-pozos-hidrocarburos-adjunto-iv" \
+            || echo "catalog: FAILED (curl exit $?)"
+
+      - name: Do the files answer? (datos.energia.gob.ar, HEAD only)
+        run: |
+          cat > urls.txt <<'URLS'
+          http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/cb5c0f04-7835-45cd-b982-3e25ca7d7751/download/capitulo-iv-pozos.csv
+          http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/5578dd48-d0dd-487e-8ddc-bd3ebb1afef0/download/padrn-de-pozos-de-captulo-iv-con-fecha-de-primera-produccin.csv
+          http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/b5b58cdc-9e07-41f9-b392-fb9ec68b0725/download/produccin-de-pozos-de-gas-y-petrleo-no-convencional.csv
+          http://datos.energia.gob.ar/dataset/71fa2e84-0316-4a1b-af68-7f35e41f58d7/resource/2280ad92-6ed3-403e-a095-50139863ab0d/download/datos-de-fractura-de-pozos-de-hidrocarburos-adjunto-iv-actualizacin-diaria.csv
+          http://datos.energia.gob.ar/dataset/c846e79c-026c-4040-897f-1ad3543b407c/resource/3fcda0c5-68aa-4f33-bbe2-0180e6dbeebe/download/shapefile-de-pozos.zip
+          http://datos.energia.gob.ar/dataset/81cfad0a-4162-4f85-ad71-837f5a5fae57/resource/48a306a3-d5da-4f28-8ab5-7f80767ffdec/download/produccin-hidrocarburos-concesiones-de-explotacin.zip
+          URLS
+          while read -r url; do
+            echo "== ${url##*/}"
+            out=$(curl -sS -I -L --connect-timeout 10 --max-time 30 "$url" 2>&1) \
+              && echo "$out" | grep -iE "^(HTTP|content-length|content-type)" \
+              || echo "FAILED: $out"
+          done < urls.txt
