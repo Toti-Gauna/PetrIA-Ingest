@@ -28,47 +28,110 @@ from .registry import TEXT_COLUMNS, clean_registry, read_registry
 
 SOURCE = "registry"
 
-_POINT = "CASE WHEN lon IS NULL THEN NULL ELSE ST_SetSRID(ST_MakePoint(lon, lat), 4326) END"
-
-# Column names come from our own constant list, never from the file.
-_TEXT_DEFS = ", ".join(f"{c} text" for c in TEXT_COLUMNS)
-_TEXT_COLS = ", ".join(TEXT_COLUMNS)
-_TEXT_SETS = ",\n  ".join(f"{c} = EXCLUDED.{c}" for c in TEXT_COLUMNS)
-
 WELL_COLUMNS = ["sigla", "lon", "lat", "location_flag", "n_records"]
 RECORD_COLUMNS = ["idpozo", "sigla", *TEXT_COLUMNS, "lon", "lat", "location_flag"]
 
-STAGE_SQL = f"""
+# All SQL in this file is plain fixed text: no string templates, nothing built at run
+# time. The descriptive columns are written out in full; a test
+# (test_every_descriptive_column_reaches_the_database) fails if they drift away from
+# TEXT_COLUMNS in registry.py.
+
+# Staging tables live only inside the transaction (ON COMMIT DROP).
+STAGE_SQL = """
 CREATE TEMP TABLE stage_wells (
   sigla text, lon double precision, lat double precision,
   location_flag text, n_records integer
 ) ON COMMIT DROP;
 CREATE TEMP TABLE stage_records (
-  idpozo bigint, sigla text, {_TEXT_DEFS},
+  idpozo bigint, sigla text,
+  area text, cod_area text, empresa text, yacimiento text, cod_yacimiento text,
+  formacion text, cuenca text, provincia text, cota text, profundidad text,
+  clasificacion text, subclasificacion text, tipo_recurso text, sub_tipo_recurso text,
+  gasplus text, tipopozo text, tipoextraccion text, tipoestado text,
+  adjiv_fecha_inicio_perf text, adjiv_fecha_fin_perf text,
+  adjiv_fecha_inicio_term text, adjiv_fecha_fin_term text,
   lon double precision, lat double precision, location_flag text
 ) ON COMMIT DROP;
 """
 
-UPSERT_WELLS = f"""
-INSERT INTO geo.wells (sigla, geom, location_flag, n_records, load_id)
-SELECT sigla, {_POINT}, location_flag, n_records, :load_id FROM stage_wells
-ON CONFLICT (sigla) DO UPDATE SET
-  geom = EXCLUDED.geom,
-  location_flag = EXCLUDED.location_flag,
-  n_records = EXCLUDED.n_records,
-  load_id = EXCLUDED.load_id
-"""
 
-UPSERT_RECORDS = f"""
-INSERT INTO geo.well_records (idpozo, sigla, {_TEXT_COLS}, geom, location_flag, load_id)
-SELECT idpozo, sigla, {_TEXT_COLS}, {_POINT}, location_flag, :load_id FROM stage_records
-ON CONFLICT (idpozo) DO UPDATE SET
-  sigla = EXCLUDED.sigla,
-  {_TEXT_SETS},
-  geom = EXCLUDED.geom,
-  location_flag = EXCLUDED.location_flag,
-  load_id = EXCLUDED.load_id
-"""
+def _upsert_wells(conn: Connection, load_id: int) -> None:
+    conn.execute(
+        text(
+            """
+            INSERT INTO geo.wells (sigla, geom, location_flag, n_records, load_id)
+            SELECT sigla,
+                   CASE WHEN lon IS NULL THEN NULL
+                        ELSE ST_SetSRID(ST_MakePoint(lon, lat), 4326) END,
+                   location_flag, n_records, :load_id
+            FROM stage_wells
+            ON CONFLICT (sigla) DO UPDATE SET
+              geom = EXCLUDED.geom,
+              location_flag = EXCLUDED.location_flag,
+              n_records = EXCLUDED.n_records,
+              load_id = EXCLUDED.load_id
+            """
+        ),
+        {"load_id": load_id},
+    )
+
+
+def _upsert_records(conn: Connection, load_id: int) -> None:
+    conn.execute(
+        text(
+            """
+            INSERT INTO geo.well_records (
+              idpozo, sigla,
+              area, cod_area, empresa, yacimiento, cod_yacimiento,
+              formacion, cuenca, provincia, cota, profundidad,
+              clasificacion, subclasificacion, tipo_recurso, sub_tipo_recurso,
+              gasplus, tipopozo, tipoextraccion, tipoestado,
+              adjiv_fecha_inicio_perf, adjiv_fecha_fin_perf,
+              adjiv_fecha_inicio_term, adjiv_fecha_fin_term,
+              geom, location_flag, load_id)
+            SELECT
+              idpozo, sigla,
+              area, cod_area, empresa, yacimiento, cod_yacimiento,
+              formacion, cuenca, provincia, cota, profundidad,
+              clasificacion, subclasificacion, tipo_recurso, sub_tipo_recurso,
+              gasplus, tipopozo, tipoextraccion, tipoestado,
+              adjiv_fecha_inicio_perf, adjiv_fecha_fin_perf,
+              adjiv_fecha_inicio_term, adjiv_fecha_fin_term,
+              CASE WHEN lon IS NULL THEN NULL
+                   ELSE ST_SetSRID(ST_MakePoint(lon, lat), 4326) END,
+              location_flag, :load_id
+            FROM stage_records
+            ON CONFLICT (idpozo) DO UPDATE SET
+              sigla = EXCLUDED.sigla,
+              area = EXCLUDED.area,
+              cod_area = EXCLUDED.cod_area,
+              empresa = EXCLUDED.empresa,
+              yacimiento = EXCLUDED.yacimiento,
+              cod_yacimiento = EXCLUDED.cod_yacimiento,
+              formacion = EXCLUDED.formacion,
+              cuenca = EXCLUDED.cuenca,
+              provincia = EXCLUDED.provincia,
+              cota = EXCLUDED.cota,
+              profundidad = EXCLUDED.profundidad,
+              clasificacion = EXCLUDED.clasificacion,
+              subclasificacion = EXCLUDED.subclasificacion,
+              tipo_recurso = EXCLUDED.tipo_recurso,
+              sub_tipo_recurso = EXCLUDED.sub_tipo_recurso,
+              gasplus = EXCLUDED.gasplus,
+              tipopozo = EXCLUDED.tipopozo,
+              tipoextraccion = EXCLUDED.tipoextraccion,
+              tipoestado = EXCLUDED.tipoestado,
+              adjiv_fecha_inicio_perf = EXCLUDED.adjiv_fecha_inicio_perf,
+              adjiv_fecha_fin_perf = EXCLUDED.adjiv_fecha_fin_perf,
+              adjiv_fecha_inicio_term = EXCLUDED.adjiv_fecha_inicio_term,
+              adjiv_fecha_fin_term = EXCLUDED.adjiv_fecha_fin_term,
+              geom = EXCLUDED.geom,
+              location_flag = EXCLUDED.location_flag,
+              load_id = EXCLUDED.load_id
+            """
+        ),
+        {"load_id": load_id},
+    )
 
 
 def file_sha256(path: str | Path) -> str:
@@ -133,8 +196,8 @@ def load_registry(path: str | Path, engine: Engine, *, force: bool = False) -> d
         _copy(conn, "stage_wells", WELL_COLUMNS, clean.wells)
         _copy(conn, "stage_records", RECORD_COLUMNS, clean.records)
         # Wells first: every record points to its well.
-        conn.execute(text(UPSERT_WELLS), {"load_id": load_id})
-        conn.execute(text(UPSERT_RECORDS), {"load_id": load_id})
+        _upsert_wells(conn, load_id)
+        _upsert_records(conn, load_id)
 
         conn.execute(
             text(

@@ -1,3 +1,5 @@
+import csv
+import json
 from pathlib import Path
 
 import pytest
@@ -7,6 +9,7 @@ from sqlalchemy.exc import DBAPIError
 from petria_ingest import load as load_module
 from petria_ingest import migrate
 from petria_ingest.load import load_registry
+from petria_ingest.registry import EXPECTED_COLUMNS, TEXT_COLUMNS
 
 from .conftest import ML_URL, needs_db
 
@@ -53,6 +56,36 @@ def test_load_writes_wells_records_and_a_load_run(empty_geo):
         sha, report = c.execute(text("SELECT file_sha256, report FROM geo.load_runs")).one()
         assert sha == load_module.file_sha256(FIXTURE)
         assert report["records"] == 7
+
+
+def test_every_descriptive_column_reaches_the_database(empty_geo, tmp_path):
+    """Guards the plain-text SQL: if it ever drifts from TEXT_COLUMNS, this fails."""
+    gj = json.dumps({"type": "Point", "coordinates": [-69.4, -38.6]})
+    row = {c: f"v_{c}" for c in EXPECTED_COLUMNS}
+    row.update(sigla="DRIFT-1", idpozo="900", geojson=gj, geom="")
+    path = tmp_path / "every_column.csv"
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=EXPECTED_COLUMNS)
+        writer.writeheader()
+        writer.writerow(row)
+
+    load_registry(path, empty_geo)
+    with empty_geo.connect() as c:
+        stored = c.execute(
+            text("SELECT * FROM geo.well_records WHERE idpozo = 900")
+        ).mappings().one()  # fmt: skip
+        table_columns = {
+            r[0]
+            for r in c.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'geo' AND table_name = 'well_records'"
+                )
+            )
+        }
+    for column in TEXT_COLUMNS:
+        assert stored[column] == f"v_{column}", f"{column} was not stored"
+    assert table_columns == {"idpozo", "sigla", *TEXT_COLUMNS, "geom", "location_flag", "load_id"}
 
 
 def test_the_same_file_twice_is_skipped_and_changes_nothing(empty_geo):

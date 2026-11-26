@@ -12,7 +12,8 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-FLAGS = "('ok', 'swapped_fixed', 'invalid')"
+# The SQL below is plain fixed text on purpose: no string templates, nothing built at
+# run time. The allowed location flags are written out in each CHECK.
 
 
 def upgrade() -> None:
@@ -35,11 +36,12 @@ def upgrade() -> None:
         """
     )
     op.execute(
-        f"""
+        """
         CREATE TABLE geo.wells (
           sigla          text PRIMARY KEY,                 -- the physical well
           geom           geometry(Point, 4326),            -- NULL when no valid point
-          location_flag  text NOT NULL CHECK (location_flag IN {FLAGS}),
+          location_flag  text NOT NULL
+                         CHECK (location_flag IN ('ok', 'swapped_fixed', 'invalid')),
           n_records      integer NOT NULL,                 -- how many idpozo it groups
           load_id        bigint NOT NULL REFERENCES geo.load_runs (id)
         );
@@ -50,7 +52,7 @@ def upgrade() -> None:
         """
     )
     op.execute(
-        f"""
+        """
         CREATE TABLE geo.well_records (
           idpozo                   bigint PRIMARY KEY,
           sigla                    text NOT NULL REFERENCES geo.wells (sigla),
@@ -77,7 +79,8 @@ def upgrade() -> None:
           adjiv_fecha_inicio_term  text,
           adjiv_fecha_fin_term     text,
           geom                     geometry(Point, 4326),
-          location_flag            text NOT NULL CHECK (location_flag IN {FLAGS}),
+          location_flag            text NOT NULL
+                                   CHECK (location_flag IN ('ok', 'swapped_fixed', 'invalid')),
           load_id                  bigint NOT NULL REFERENCES geo.load_runs (id)
         );
         CREATE INDEX well_records_sigla_idx ON geo.well_records (sigla);

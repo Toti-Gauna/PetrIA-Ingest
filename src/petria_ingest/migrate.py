@@ -8,17 +8,19 @@ They must run as ingest_svc: the creator of a table is its owner, and the 0.2 ru
 migrations/env.py refuses to run as anyone else.
 """
 
-from importlib.resources import files
+from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 
 from .db import database_url, normalize_url
 
+MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"  # shipped inside the package
+
 
 def _config(url: str) -> Config:
     cfg = Config()
-    cfg.set_main_option("script_location", str(files("petria_ingest").joinpath("migrations")))
+    cfg.set_main_option("script_location", str(MIGRATIONS_DIR))
     # "%" must be doubled for Alembic's config parser (a password could contain one).
     cfg.set_main_option("sqlalchemy.url", normalize_url(url).replace("%", "%%"))
     return cfg
