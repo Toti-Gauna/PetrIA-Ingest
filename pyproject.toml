@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "petria-ingest"
+version = "0.1.0"
+description = "PetrIA ingestion: official Argentine well data, cleaned, into the geo schema"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "pandas>=2.2",          # tables in memory: read and clean the CSVs
+  "sqlalchemy>=2.0",      # safe messenger to Postgres (parameterized queries)
+  "alembic>=1.13",        # migrations: numbered structure changes, with memory
+  "psycopg[binary]>=3.1", # the Postgres driver SQLAlchemy uses
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",            # runs the tests
+  "ruff>=0.6",            # checks and formats the code
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+petria_ingest = ["migrations/*.py", "migrations/*.mako", "migrations/versions/*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Notebooks are exploration and runners (Colab), not library code.
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+# E/F: real errors, I: import order, B: likely bugs, UP: modern Python.
+select = ["E", "F", "I", "B", "UP"]

@@ -1,0 +1,10 @@
+sigla,idpozo,area,cod_area,empresa,yacimiento,cod_yacimiento,formacion,cuenca,provincia,cota,profundidad,clasificacion,subclasificacion,tipo_recurso,sub_tipo_recurso,gasplus,tipopozo,tipoextraccion,tipoestado,adjiv_fecha_inicio_perf,adjiv_fecha_fin_perf,adjiv_fecha_inicio_term,adjiv_fecha_fin_term,geojson,geom
+SYN-A-1,101,,,SYNTHETIC OPERATOR SA,,,vaca muerta,NEUQUINA,Neuquén,,,,,,,,Petrolífero,,,,,,,"{""type"": ""Point"", ""coordinates"": [-69.4, -38.6]}",
+SYN-A-1,102,,,SYNTHETIC OPERATOR SA,,,vaca muerta,NEUQUINA,Neuquén,,,,,,,,Petrolífero,,,,,,,"{""type"": ""Point"", ""coordinates"": [-69.4, -38.6]}",
+SYN-B-2,201,,,SYNTHETIC OPERATOR SA,,,vaca muerta,NEUQUINA,Neuquén,,,,,,,,Petrolífero,,,,,,,"{""type"": ""Point"", ""coordinates"": [-38.59, -69.42]}",
+SYN-C-3,301,,,SYNTHETIC OPERATOR SA,,,springhill,AUSTRAL,Santa Cruz,,,,,,,,Petrolífero,,,,,,,"{""type"": ""Point"", ""coordinates"": [-69.2, -51.6]}",
+SYN-D-4,401,,,SYNTHETIC OPERATOR SA,,,vaca muerta,NEUQUINA,Mendoza,,,,,,,,Petrolífero,,,,,,,,
+,501,,,SYNTHETIC OPERATOR SA,,,vaca muerta,NEUQUINA,Neuquén,,,,,,,,Petrolífero,,,,,,,"{""type"": ""Point"", ""coordinates"": [-69.0, -38.0]}",
+SYN-E-5,abc,,,SYNTHETIC OPERATOR SA,,,vaca muerta,NEUQUINA,Neuquén,,,,,,,,Petrolífero,,,,,,,"{""type"": ""Point"", ""coordinates"": [-69.0, -38.0]}",
+ SYN-F-6 ,601,,,SYNTHETIC OPERATOR SA,,,NA,NEUQUINA,Neuquén,,,,,,,,Petrolífero,,,,,,,{not json,
+SYN-G-7,701,,,SYNTHETIC OPERATOR SA,,,vaca muerta,NEUQUINA,Neuquén,,,,,,,,Petrolífero,,,,,,,"{""type"": ""Point"", ""coordinates"": [0.0, 0.0]}",
