@@ -162,6 +162,10 @@ def report_lines(report: dict) -> list[str]:
         f"Rows read: {r['rows_read']}  |  rejected: {r['rows_rejected']}",
         f"Records (idpozo): {r['records']}  |  wells (sigla): {r['wells']}  |  "
         f"wells with several records: {r['wells_with_several_records']}",
+        f"  of them, with different formations: {r['wells_with_several_formations']}  "
+        f"e.g. {r['wells_with_several_formations_sample']}",
+        f"  of them, with a record missing its formacion: "
+        f"{r['wells_with_a_record_missing_formacion']}",
         f"Locations (records): ok {flags.get('ok', 0)}, swapped_fixed "
         f"{flags.get('swapped_fixed', 0)}, invalid {flags.get('invalid', 0)}",
         f"Locations (wells): {r['well_location_flags']}",

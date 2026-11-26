@@ -44,6 +44,12 @@ Why not a Neuquén box: the registry covers every province.
 - The well's location is the point of its **lowest idpozo with a valid point**.
   If two records of the same well are more than 100 m apart, it is counted in the
   report (`wells_with_points_far_apart`).
+- Evidence for the open question "why several idpozo per sigla?": the report
+  counts wells whose records name **different formations**
+  (`wells_with_several_formations`) and, apart, wells with a record whose
+  `formacion` is **empty** (`wells_with_a_record_missing_formacion`). An empty
+  value means "the registry does not say": it is never treated as a different
+  formation and never filled in.
 
 ## Loads
 - Each load records the file name, its SHA-256 fingerprint and the full report in

@@ -178,8 +178,18 @@ def clean_registry(df: pd.DataFrame) -> CleanRegistry:
     index = well_index.build_well_index(pairs)
 
     wells, far_apart = [], []
+    several_formations, formation_missing = [], []
     for sigla, idpozos in index.items():
         recs = [by_idpozo[i] for i in idpozos]
+        if len(recs) > 1:
+            # Evidence for the open question "why several idpozo per sigla?" (ADR-0009).
+            # An empty formacion means "the registry does not say": it is counted apart,
+            # never treated as a different formation and never filled in.
+            names = {r["formacion"] for r in recs if r["formacion"] is not None}
+            if len(names) > 1:
+                several_formations.append(sigla)
+            if any(r["formacion"] is None for r in recs):
+                formation_missing.append(sigla)
         located = [r for r in recs if r["location_flag"] != INVALID]
         chosen = located[0] if located else None  # lowest idpozo with a valid point
         if chosen and len(located) > 1:
@@ -209,6 +219,10 @@ def clean_registry(df: pd.DataFrame) -> CleanRegistry:
         "records": len(records),
         "wells": len(wells),
         "wells_with_several_records": sum(1 for w in wells if w["n_records"] > 1),
+        "wells_with_several_formations": len(several_formations),
+        "wells_with_several_formations_sample": several_formations[:SAMPLE_SIZE],
+        "wells_with_a_record_missing_formacion": len(formation_missing),
+        "wells_with_a_record_missing_formacion_sample": formation_missing[:SAMPLE_SIZE],
         "record_location_flags": dict(Counter(r["location_flag"] for r in records)),
         "well_location_flags": dict(Counter(w["location_flag"] for w in wells)),
         "geojson_problems": dict(geojson_problems),

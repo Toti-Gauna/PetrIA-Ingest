@@ -86,6 +86,7 @@ def test_report_counts_every_case():
     assert r["rejected_lines_sample"] == {"empty_sigla": [7], "bad_idpozo": [8]}
     assert r["records"] == 7 and r["wells"] == 6
     assert r["wells_with_several_records"] == 1
+    assert r["wells_with_several_formations"] == 0  # SYN-A-1: both "vaca muerta"
     assert r["record_location_flags"] == {"ok": 3, "swapped_fixed": 1, "invalid": 3}
     assert r["well_location_flags"] == {"ok": 2, "swapped_fixed": 1, "invalid": 3}
     assert r["geojson_problems"] == {"missing": 1, "unreadable": 1}
@@ -131,6 +132,25 @@ def test_points_far_apart_in_the_same_well_are_reported():
     r = clean_registry(df).report
     assert r["wells_with_points_far_apart"] == 1
     assert r["wells_with_points_far_apart_sample"] == ["W"]
+
+
+def test_formations_of_a_well_records_are_compared_and_empty_is_unknown():
+    df = _df(
+        [
+            {"sigla": "SAME", "idpozo": "1", "formacion": "vaca muerta"},
+            {"sigla": "SAME", "idpozo": "2", "formacion": "vaca muerta"},
+            {"sigla": "MIXED", "idpozo": "3", "formacion": "vaca muerta"},
+            {"sigla": "MIXED", "idpozo": "4", "formacion": "quintuco"},
+            {"sigla": "UNKNOWN", "idpozo": "5", "formacion": "vaca muerta"},
+            {"sigla": "UNKNOWN", "idpozo": "6", "formacion": None},  # the registry does not say
+            {"sigla": "ALONE", "idpozo": "7", "formacion": None},  # one record: nothing to compare
+        ]
+    )
+    r = clean_registry(df).report
+    assert r["wells_with_several_formations"] == 1
+    assert r["wells_with_several_formations_sample"] == ["MIXED"]
+    assert r["wells_with_a_record_missing_formacion"] == 1  # an empty value is not "different"
+    assert r["wells_with_a_record_missing_formacion_sample"] == ["UNKNOWN"]
 
 
 def test_one_idpozo_under_two_wells_stops_the_cleaning():
