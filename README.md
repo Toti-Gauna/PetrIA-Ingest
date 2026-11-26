@@ -21,7 +21,7 @@ quality report. Production and fracturing come in 1.1b.
 ```
 src/petria_ingest/
   geo_points.py     Argentina box; fix swapped points (ok / swapped_fixed / invalid)
-  well_index.py     hash map idpozo -> sigla (written by the project owner)
+  well_index.py     hash map idpozo -> sigla (algorithm spot, AI-assisted)
   registry.py       read and clean the registry CSV
   load.py           quality report, fingerprint, idempotent load (COPY + upsert)
   migrate.py        run the migrations (Alembic) as ingest_svc
