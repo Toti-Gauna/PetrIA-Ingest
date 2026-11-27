@@ -16,3 +16,10 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+  # Python libraries (pyproject.toml), proposed as pull requests.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

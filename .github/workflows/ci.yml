@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and format (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+
+  test:
+    name: Tests (pytest, Postgres 18 + PostGIS + the 0.2 roles)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_DB: petria_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      PGPASSWORD: ci-only-not-a-secret
+      TEST_INGEST_URL: postgresql://ingest_svc:ci-ingest@localhost:5432/petria_test
+      TEST_ML_URL: postgresql://ml_svc:ci-ml@localhost:5432/petria_test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # The roles come from the PetrIA repo (public), the single source of truth (ADR-0012).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: Toti-Gauna/PetrIA
+          path: _petria
+          sparse-checkout: infra/postgres
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: "Database: PostGIS and the 0.2 schemas and roles"
+        run: |
+          P="psql -h localhost -U postgres -d petria_test -v ON_ERROR_STOP=1 -q"
+          $P -c "CREATE EXTENSION IF NOT EXISTS postgis"
+          $P -f _petria/infra/postgres/init/02-schemas-and-roles.sql
+          $P -v ingest_pw=ci-ingest -v ml_pw=ci-ml -v api_pw=ci-api -v rag_pw=ci-rag \
+             -f _petria/infra/postgres/sql/set-passwords.sql
+      - run: pytest -v
